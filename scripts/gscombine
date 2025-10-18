@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# A script to combine multiple PDF files into one using Ghostscript.
+
+# --- Define the main function for combining PDFs ---
+gscombine() {
+  # --- Show usage information if no arguments are provided ---
+  if [ "$#" -lt 1 ]; then
+    echo "Usage: ./gscombine.sh [-o output.pdf] file1.pdf [file2.pdf ...]"
+    echo "If no -o or --output flag is given, the output file will be named combined.pdf"
+    return 1
+  fi
+
+  # --- Initialize local variables ---
+  local output="combined.pdf"
+  local files=()
+
+  # --- Parse command-line arguments passed to the function ---
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -o|--output)
+        # Check if an output filename is provided after the flag
+        if [ -n "$2" ]; then
+          output="$2"
+          shift 2 # Move past the flag and its value
+        else
+          echo "Error: Missing filename after $1 flag." >&2
+          return 1
+        fi
+        ;;
+      *)
+        # Add the argument to the list of input files
+        files+=("$1")
+        shift # Move to the next argument
+        ;;
+    esac
+  done
+
+  # --- Validate that at least two input files are provided ---
+  if [ "${#files[@]}" -lt 2 ]; then
+    echo "Error: You need to provide at least two input PDF files to combine." >&2
+    return 1
+  fi
+
+  # --- Run Ghostscript to combine the PDFs ---
+  echo "🔧 Combining ${#files[@]} file(s) into '$output'..."
+
+  gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dAutoRotatePages=/None -sOutputFile="$output" "${files[@]}"
+
+  # --- Check the exit status of Ghostscript and report the result ---
+  if [ $? -eq 0 ]; then
+    echo "✅ Successfully created '$output'."
+  else
+    echo "❌ Ghostscript failed to create the combined PDF." >&2
+    return 1
+  fi
+}
+
+# --- Main script execution ---
+# Call the gscombine function, passing all command-line arguments to it.
+# The script will exit with the return code of the gscombine function.
+gscombine "$@"
+

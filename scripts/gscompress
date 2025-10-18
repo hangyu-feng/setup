@@ -1,0 +1,38 @@
+#!/bin/bash
+
+gscompress() {
+  if [ "$#" -lt 1 ]; then
+    echo "Usage: gscompress file1.pdf [file2.pdf ...]"
+    return 1
+  fi
+
+  for infile in "$@"; do
+    if [[ "$infile" != *.pdf ]]; then
+      echo "Skipping '$infile' (not a PDF)"
+      continue
+    fi
+
+    # Remove .pdf extension and create output name
+    local base="${infile%.pdf}"
+    local outfile="${base}_compressed.pdf"
+
+    echo "🔧 Compressing $infile → $outfile"
+
+    gs -sDEVICE=pdfwrite \
+       -dCompatibilityLevel=1.4 \
+       -dPDFSETTINGS=/ebook \
+       -dNOPAUSE -dQUIET -dBATCH \
+       -sOutputFile="$outfile" \
+       "$infile"
+
+    if [ $? -eq 0 ]; then
+      echo "✅ Created $outfile"
+    else
+      echo "❌ Failed to compress $infile"
+    fi
+  done
+}
+
+# --- Main script execution ---
+gscompress "$@"
+
