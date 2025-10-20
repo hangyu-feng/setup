@@ -77,5 +77,5 @@ gscompress() {
     fi
   done
 }
-GIT_SETUP_DIR=$(git rev-parse --show-toplevel)
+SETUP_BASE_DIR=$(cd "$(dirname -- "${BASH_SOURCE[0]}")/../.."; pwd)
 export RIPGREP_CONFIG_PATH=${GIT_SETUP_DIR}/configs/ripgreprc
