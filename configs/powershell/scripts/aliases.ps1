@@ -26,9 +26,9 @@ function which($name)
 }
 
 function defpy {
-  if (Test-Path -Path ~/def_env) {
+  if (Test-Path -Path ~/def_env -and ((Get-Location).Path -eq (Resolve-Path ~).Path)) {
     ~/def_env/Scripts/activate.ps1
-  }
+    }
 }
 
 function conda-activate($conda_env = "C:\Users\VailG\miniconda3") {
