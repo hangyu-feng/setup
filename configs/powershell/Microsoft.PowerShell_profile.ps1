@@ -23,6 +23,7 @@ Set-PSReadLineOption -Colors @{
   Parameter = 'Cyan'  # parameters were unreadable for Nord colorscheme
   Operator = 'Cyan'
 }
+Set-PSReadLineOption -PredictionSource History
 
 
 . "${PSScriptRoot}/scripts/environment_variables.ps1"
