@@ -1,8 +1,8 @@
 # tex-fmt.toml
 check = false
 print = false
-wrap = true
-wraplen = 100
+wrap = false
+# wraplen = 100
 tabsize = 4
 tabchar = "space"
 verbosity = "warn"
