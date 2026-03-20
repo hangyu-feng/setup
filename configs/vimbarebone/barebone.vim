@@ -6,11 +6,16 @@ packadd comment
 " When your .vimrc file is sourced twice, the autocommands will appear twice.
 " To avoid this, put this command in your .vimrc file, before defining
 " autocommands:
-:autocmd!
+augroup vimrc
+  autocmd!
 
 set number
 set history=500
+
+" Leader key
+let mapleader = " "
 set background=dark
+colorscheme gruvbox
 
 set splitbelow
 set splitright
@@ -60,6 +65,12 @@ endif
 
 " Always show current position
 set ruler
+
+" Always show statusline
+set laststatus=2
+
+" Always show sign column (prevents layout shift)
+set signcolumn=yes
 
 " folding by mouse
 " set foldcolumn=4
@@ -198,7 +209,7 @@ catch
 endtry
 
 " Return to last edit position when opening files (You want this!)
-au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
+  autocmd BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
 
 " Delete trailing white space on save, useful for some filetypes ;)
 fun! CleanExtraSpaces()
@@ -208,17 +219,52 @@ fun! CleanExtraSpaces()
   call setpos('.', save_cursor)
   call setreg('/', old_query)
 endfun
-if has("autocmd")
   autocmd BufWritePre * :call CleanExtraSpaces()
-endif
 
-autocmd FileType cpp setlocal fdm=syntax
+  autocmd FileType cpp setlocal fdm=syntax
+
+augroup END
 set foldlevelstart=20
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " yank to clipboard (this is not included in basic.vim
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " yank to clipboard
+" netrw tree view
+let g:netrw_liststyle=3
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" => Window navigation
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" => Leader key mappings
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" Save
+nnoremap <leader>w :w<CR>
+
+" Save and close
+nnoremap <leader>x :x<CR>
+
+" Quit
+nnoremap <leader>q :q<CR>
+
+" Clear search highlight
+nnoremap <leader>h :nohlsearch<CR>
+
+" Toggle file tree (netrw)
+nnoremap <leader>e :Lexplore<CR>
+
+" Close buffer
+nnoremap <leader>d :bd<CR>
+
+" Search in current directory
+nnoremap <leader>f :vimgrep // **/*<Left><Left><Left><Left><Left><Left>
+
 if has("clipboard")
   set clipboard=unnamed " copy to the system clipboard
   if has("unnamedplus") " X11 support
