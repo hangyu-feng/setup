@@ -25,7 +25,9 @@ set autoread
 
 " :W sudo saves the file
 " (useful for handling the permission-denied error)
-command W w !sudo tee % > /dev/null
+if has("unix")
+  command W w !sudo tee % > /dev/null
+endif
 
 " Use <Esc> to leave terminal
 :tnoremap <Esc> <C-\><C-n>

@@ -10,7 +10,8 @@ function rename-ext {
   }
 }
 
-Set-Alias -Name vi -Value vim
+Set-Alias -Name vim -Value "C:\Program Files\Vim\vim92\vim.exe"
+Set-Alias -Name vi -Value "C:\Program Files\Vim\vim92\vim.exe"
 
 Set-Alias -Name python2 -Value "C:\Python27\python.exe"
 Set-Alias -Name py2 -Value "C:\Python27\python.exe"
@@ -19,6 +20,8 @@ Set-Alias -Name emulator -Value "C:\Users\VailG\AppData\Local\Android\Sdk\emulat
 Set-Alias -Name adb -Value "C:\Users\VailG\AppData\Local\Android\Sdk\platform-tools\adb.exe"
 Set-Alias -Name mail -Value "Send-MailMessage"
 Set-Alias -Name rcon -Value "C:\Users\VailG\rcon-0.10.3-win64\rcon.exe"
+
+set-alias -name conda -value "micromamba"
 
 function which($name)
 {

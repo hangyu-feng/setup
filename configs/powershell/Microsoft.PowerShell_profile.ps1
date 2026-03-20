@@ -34,6 +34,3 @@ Set-PSReadLineOption -PredictionSource History
 
 . "${PSScriptRoot}/scripts/red_dead_online.ps1"
 
-if ((Get-Location).Provider.Name -eq 'FileSystem' -and (Get-Location).Path -eq (Resolve-Path -LiteralPath $HOME).Path) {
-  defpy
-}
