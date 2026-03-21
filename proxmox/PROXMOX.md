@@ -16,6 +16,7 @@
 | 2026-03-19 | SSH key auth configured (Proxmox host → gameserver) |
 | 2026-03-19 | Desynced dedicated server deployed and running (Wine+Docker, UDP 10099) |
 | 2026-03-19 | Scaphandre v1.0.2 installed on Proxmox host for power monitoring |
+| 2026-03-21 | Tailscale installed on gameserver with SSH enabled |
 
 ---
 
@@ -99,8 +100,9 @@
 
 ### SSH Access
 ```bash
-ssh root@10.0.0.50
-ssh gameserver   # with ~/.ssh/config entry below
+ssh root@10.0.0.50           # local network
+ssh root@gameserver          # via Tailscale MagicDNS
+ssh gameserver               # via ~/.ssh/config alias
 ```
 
 `~/.ssh/config`:
@@ -109,6 +111,10 @@ Host gameserver
     HostName 10.0.0.50
     User root
     IdentityFile ~/.ssh/id_ed25519
+
+Host gameserver-ts
+    HostName gameserver
+    User root
 ```
 
 Emergency access via Proxmox host: `qm terminal 111` (exit with Ctrl+O)
@@ -117,6 +123,7 @@ Emergency access via Proxmox host: `qm terminal 111` (exit with Ctrl+O)
 - Docker CE (latest stable, official Docker repo)
 - docker-compose-plugin (`docker compose` CLI)
 - qemu-guest-agent
+- Tailscale (SSH enabled via `tailscale up --ssh`)
 - vim, htop, curl, wget, git
 
 ### Docker
@@ -259,7 +266,7 @@ RAPL is not accessible from inside the gameserver VM — per-container breakdown
 4. Invite friends to the friends' tailnet
 5. Friends connect to `<tailscale-ip>:10099` — personal tailnet stays private
 
-**Status:** Not yet implemented
+**Status:** Tailscale installed on gameserver (step 1 done). Node sharing not yet configured.
 
 ---
 
