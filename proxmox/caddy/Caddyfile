@@ -1,0 +1,4 @@
+# AdGuard Home web UI
+:80 {
+	reverse_proxy adguard-home:80
+}

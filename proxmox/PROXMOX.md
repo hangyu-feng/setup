@@ -140,6 +140,15 @@ All Docker apps live under `/opt/apps/`. Each app has its own subdirectory with 
 /opt/apps/
 ├── <appname>/
 │   └── compose.yml
+├── adguard-home/
+│   ├── compose.yml
+│   ├── conf/              (config — persisted via volume)
+│   └── work/              (runtime data — persisted via volume)
+├── caddy/
+│   ├── compose.yml
+│   ├── Caddyfile
+│   ├── data/              (certs — persisted via volume)
+│   └── config/            (auto-config — persisted via volume)
 └── desynced/
     ├── Dockerfile
     ├── compose.yml
@@ -172,7 +181,57 @@ docker compose build --no-cache && docker compose up -d
 ### Deployed Apps
 | App | Status | Path | Notes |
 |---|---|---|---|
+| Caddy | planned | `/opt/apps/caddy/` | Reverse proxy, ports 80/443 |
+| AdGuard Home | planned | `/opt/apps/adguard-home/` | DNS ad-blocking, port 53 (TCP+UDP), web UI on 3000 |
 | Desynced | running | `/opt/apps/desynced/` | Wine+SteamCMD image, App ID 2943070, UDP 10099; local saves at `C:\Users\VailG\AppData\Local\Desynced` |
+| Uptime Kuma | planned | `/opt/apps/uptime-kuma/` | Service monitoring dashboard, TCP 3001 |
+| Watchtower | planned | `/opt/apps/watchtower/` | Auto-updates Docker containers on a schedule |
+
+### Planned: Uptime Kuma
+
+Lightweight self-hosted monitoring. Checks HTTP/TCP/ping/DNS endpoints and sends alerts.
+
+**Setup steps:**
+1. `mkdir -p /opt/apps/uptime-kuma`
+2. Create `/opt/apps/uptime-kuma/compose.yml`:
+```yaml
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./data:/app/data
+```
+3. `cd /opt/apps/uptime-kuma && docker compose up -d`
+4. Access at `http://10.0.0.50:3001`, create admin account on first visit
+5. Add monitors for: Desynced (TCP 10099), Proxmox web UI (https://10.0.0.254:8006), and any future services
+
+### Planned: Watchtower
+
+Automatically pulls new Docker images and recreates containers. Runs on a schedule.
+
+**Setup steps:**
+1. `mkdir -p /opt/apps/watchtower`
+2. Create `/opt/apps/watchtower/compose.yml`:
+```yaml
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+      - WATCHTOWER_LABEL_ENABLE=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+```
+3. `cd /opt/apps/watchtower && docker compose up -d`
+
+> `WATCHTOWER_LABEL_ENABLE=true` means Watchtower only updates containers with the label `com.centurylinklabs.watchtower.enable=true`. Add that label to containers you want auto-updated. This prevents Watchtower from updating game servers mid-session — opt in per container.
 
 ---
 
