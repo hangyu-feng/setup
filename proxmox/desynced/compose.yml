@@ -1,0 +1,24 @@
+services:
+  desynced:
+    build: .
+    container_name: desynced
+    restart: unless-stopped
+    ports:
+      - "10099:10099/udp"
+    volumes:
+      - ./server:/desynced/server
+      - ./cache:/root/.wine
+    environment:
+      SERVER_NAME: "My Desynced Server"
+      WORLD_NAME: "World1"
+      MAX_PLAYERS: 10
+      PRIVATE: "private"
+      RUN_WITHOUT_PLAYERS: "false"
+      RESOURCE_RICHNESS: 4
+      BLIGHT_THRESHOLD: 0.1
+      PEACEFUL_MODE: 2
+      WINEDEBUG: "-all"
+    logging:
+      options:
+        max-size: "5m"
+        max-file: "3"
