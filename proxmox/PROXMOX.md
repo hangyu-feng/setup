@@ -11,12 +11,19 @@
 |---|---|
 | 2026-03-19 | Initial documentation written |
 | 2026-03-19 | VM 111 (gameserver) created and configured |
-| 2026-03-19 | Docker installed on gameserver |
-| 2026-03-19 | Static IP set to `10.0.0.50` on gameserver |
-| 2026-03-19 | SSH key auth configured (Proxmox host → gameserver) |
-| 2026-03-19 | Desynced dedicated server deployed and running (Wine+Docker, UDP 10099) |
-| 2026-03-19 | Scaphandre v1.0.2 installed on Proxmox host for power monitoring |
+| 2026-03-19 | Docker installed on gameserver; static IP `10.0.0.50`; SSH key auth configured |
+| 2026-03-19 | Desynced dedicated server deployed (Wine+Docker, UDP 10099) |
+| 2026-03-19 | Scaphandre v1.0.2 installed on Proxmox host |
 | 2026-03-21 | Tailscale installed on gameserver with SSH enabled |
+| 2026-03-21 | `proxy` Docker network created; Caddy and AdGuard Home deployed |
+| 2026-03-21 | Caddy `tls internal` configured; Tailscale split DNS + AdGuard rewrite for `adguard.gameserver` |
+| 2026-03-21 | AdGuard Home set as Tailscale global nameserver with override local DNS; split DNS entry for `gameserver` kept |
+| 2026-03-23 | Monitoring stack deployed: Prometheus, Grafana, cAdvisor, Node Exporter, Uptime Kuma |
+| 2026-03-23 | Scaphandre Prometheus exporter enabled as systemd service on `diu` |
+| 2026-03-23 | Caddy updated with `grafana.gameserver` and `uptime.gameserver`; AdGuard DNS rewrites added |
+| 2026-03-23 | Custom Docker Containers Grafana dashboard created (community dashboards incompatible with cAdvisor label format) |
+| 2026-03-24 | Valheim dedicated server deployed and verified: vanilla, Tailscale-only, Supervisor UI via Caddy, UDP 2456-2457 |
+| 2026-03-25 | CUPS print server deployed in Alpine LXC 112 with Tailscale; HP ENVY 6155e added via IPP |
 
 ---
 
@@ -44,18 +51,18 @@
 - Kernel: Linux 6.8.12-20-pve
 - Boot mode: EFI
 - Storage pools: `local`, `local-lvm`, `ZFS-1`, `ZFS-2`
-- Scaphandre v1.0.2 (power monitoring)
+- Scaphandre v1.0.2 (power monitoring) — Prometheus exporter on `:8080` (systemd: `scaphandre-exporter.service`)
 
 ---
 
 ## 2. Virtual Machines
 
-| VMID | Name | Type | RAM | Disk | Status | Purpose |
-|---|---|---|---|---|---|---|
-| 103 | openmediavault | VM | 16 GB | 64 GB | stopped | NAS/media storage |
-| 104 | dockersdock | VM | 4 GB | 32 GB | stopped | Docker host (general) |
-| 107 | pzserver | VM | 8 GB | 64 GB | stopped | Project Zomboid game server |
-| 111 | gameserver | VM | 16 GB | 50 GB | running | Game server host (Docker) |
+| VMID | Name | RAM | Disk | Status | Purpose |
+|---|---|---|---|---|---|
+| 103 | openmediavault | 16 GB | 64 GB | stopped | NAS/media storage |
+| 104 | dockersdock | 4 GB | 32 GB | stopped | Docker host (general) |
+| 107 | pzserver | 8 GB | 64 GB | stopped | Project Zomboid game server |
+| 111 | gameserver | 16 GB | 50 GB | running | Game server host (Docker) |
 
 ---
 
@@ -71,6 +78,7 @@
 | 108 | cloudflared | stopped | Cloudflare tunnel |
 | 109 | transmission | stopped | BitTorrent client |
 | 110 | jellyfin | stopped | Jellyfin media server |
+| 112 | cups | running | CUPS print server (Alpine 3.23, Tailscale) |
 
 ---
 
@@ -93,6 +101,7 @@
 | Setting | Value |
 |---|---|
 | Static IPv4 | `10.0.0.50/24` |
+| Tailscale IP | `100.93.238.124` |
 | Gateway | `10.0.0.1` |
 | Interface | `ens18` |
 | IPv6 | SLAAC via router |
@@ -100,9 +109,9 @@
 
 ### SSH Access
 ```bash
-ssh root@10.0.0.50           # local network
+ssh gameserver               # via ~/.ssh/config (LAN)
 ssh root@gameserver          # via Tailscale MagicDNS
-ssh gameserver               # via ~/.ssh/config alias
+ssh root@10.0.0.50           # direct LAN
 ```
 
 `~/.ssh/config`:
@@ -136,10 +145,10 @@ Emergency access via Proxmox host: `qm terminal 111` (exit with Ctrl+O)
 
 All Docker apps live under `/opt/apps/`. Each app has its own subdirectory with a `compose.yml`.
 
+**Docker network:** `proxy` (bridge, external — shared by Caddy and all proxied apps)
+
 ```
 /opt/apps/
-├── <appname>/
-│   └── compose.yml
 ├── adguard-home/
 │   ├── compose.yml
 │   ├── conf/              (config — persisted via volume)
@@ -149,122 +158,113 @@ All Docker apps live under `/opt/apps/`. Each app has its own subdirectory with 
 │   ├── Caddyfile
 │   ├── data/              (certs — persisted via volume)
 │   └── config/            (auto-config — persisted via volume)
-└── desynced/
-    ├── Dockerfile
+├── desynced/
+│   ├── Dockerfile
+│   ├── compose.yml
+│   ├── entrypoint.sh
+│   ├── server/            (save data — persisted via volume)
+│   └── cache/             (Wine prefix — persisted via volume)
+├── monitoring/
+│   ├── compose.yml
+│   ├── prometheus/
+│   │   ├── prometheus.yml
+│   │   └── rules/
+│   │       └── aggregation.yml
+│   ├── grafana/
+│   │   └── data/          (persisted via volume)
+│   └── uptime-kuma/
+│       └── data/          (persisted via volume)
+└── valheim/
     ├── compose.yml
-    ├── entrypoint.sh
-    ├── server/            (save data — persisted via volume)
-    └── cache/             (Wine prefix — persisted via volume)
-```
-
-### Common Commands
-```bash
-# Start
-cd /opt/apps/<appname> && docker compose up -d
-
-# Stop
-docker compose down
-
-# Logs
-docker compose logs -f
-
-# Restart
-docker compose restart
-
-# Update (pre-built image only)
-docker compose pull && docker compose up -d
-
-# Rebuild custom image (e.g. after game update)
-docker compose build --no-cache && docker compose up -d
+    ├── config/            (world saves, backups — persisted via volume)
+    │   ├── worlds_local/  (vailgrass_world.db, .fwl)
+    │   └── backups/       (zip backups, max 3)
+    └── server/            (Valheim server binaries — persisted via volume)
 ```
 
 ### Deployed Apps
 | App | Status | Path | Notes |
 |---|---|---|---|
-| Caddy | planned | `/opt/apps/caddy/` | Reverse proxy, ports 80/443 |
-| AdGuard Home | planned | `/opt/apps/adguard-home/` | DNS ad-blocking, port 53 (TCP+UDP), web UI on 3000 |
-| Desynced | running | `/opt/apps/desynced/` | Wine+SteamCMD image, App ID 2943070, UDP 10099; local saves at `C:\Users\VailG\AppData\Local\Desynced` |
-| Uptime Kuma | planned | `/opt/apps/uptime-kuma/` | Service monitoring dashboard, TCP 3001 |
-| Watchtower | planned | `/opt/apps/watchtower/` | Auto-updates Docker containers on a schedule |
+| Caddy | running | `/opt/apps/caddy/` | Reverse proxy, ports 80/443; `tls internal` for `*.gameserver` hostnames |
+| AdGuard Home | running | `/opt/apps/adguard-home/` | DNS ad-blocking, port 53 (TCP+UDP); web UI at `https://adguard.gameserver` |
+| Desynced | running | `/opt/apps/desynced/` | Wine+SteamCMD, App ID 2943070, UDP 10099 |
+| Prometheus | running | `/opt/apps/monitoring/` | Metrics store, 2d raw retention + recording rules for hourly/daily aggregates |
+| Grafana | running | `/opt/apps/monitoring/` | Dashboards at `https://grafana.gameserver` |
+| cAdvisor | running | `/opt/apps/monitoring/` | Per-container CPU/memory/network/disk metrics |
+| Node Exporter | running | `/opt/apps/monitoring/` | VM-level system metrics |
+| Uptime Kuma | running | `/opt/apps/monitoring/` | Service health monitoring at `https://uptime.gameserver` |
+| Valheim | running | `/opt/apps/valheim/` | Vanilla dedicated server, UDP 2456-2457; Supervisor UI at `https://valheim.gameserver` |
+| Watchtower | planned | `/opt/apps/watchtower/` | Auto-updates containers with `com.centurylinklabs.watchtower.enable=true` label |
 
-### Planned: Uptime Kuma
+### Caddy
 
-Lightweight self-hosted monitoring. Checks HTTP/TCP/ping/DNS endpoints and sends alerts.
+Local Caddyfile: `caddy/Caddyfile` in this repo. Always edit locally, then SCP to server.
 
-**Setup steps:**
-1. `mkdir -p /opt/apps/uptime-kuma`
-2. Create `/opt/apps/uptime-kuma/compose.yml`:
-```yaml
-services:
-  uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: uptime-kuma
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./data:/app/data
-```
-3. `cd /opt/apps/uptime-kuma && docker compose up -d`
-4. Access at `http://10.0.0.50:3001`, create admin account on first visit
-5. Add monitors for: Desynced (TCP 10099), Proxmox web UI (https://10.0.0.254:8006), and any future services
-
-### Planned: Watchtower
-
-Automatically pulls new Docker images and recreates containers. Runs on a schedule.
-
-**Setup steps:**
-1. `mkdir -p /opt/apps/watchtower`
-2. Create `/opt/apps/watchtower/compose.yml`:
-```yaml
-services:
-  watchtower:
-    image: containrrr/watchtower
-    container_name: watchtower
-    restart: unless-stopped
-    environment:
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_SCHEDULE=0 0 4 * * *
-      - WATCHTOWER_LABEL_ENABLE=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-```
-3. `cd /opt/apps/watchtower && docker compose up -d`
-
-> `WATCHTOWER_LABEL_ENABLE=true` means Watchtower only updates containers with the label `com.centurylinklabs.watchtower.enable=true`. Add that label to containers you want auto-updated. This prevents Watchtower from updating game servers mid-session — opt in per container.
+- All `*.gameserver` hostnames use `tls internal` (not public TLDs, Let's Encrypt will reject them)
+- Deploy: `scp caddy/Caddyfile gameserver:/opt/apps/caddy/Caddyfile`
+- Reload: `ssh gameserver "docker exec caddy caddy reload --config /etc/caddy/Caddyfile"`
 
 ---
 
-## 6. Adding a New App or Game Server
+## 6. Workflows
+
+### Adding a New App or Game Server
 
 1. SSH into gameserver: `ssh gameserver`
 2. Create directory: `mkdir -p /opt/apps/<appname>`
-3. Write compose file: `vim /opt/apps/<appname>/compose.yml`
+3. Write compose file — attach to `proxy` network if it needs Caddy proxying
 4. Start: `cd /opt/apps/<appname> && docker compose up -d`
-5. If ports need external access, forward them on the router (`10.0.0.1`) to `10.0.0.50`
-6. Update this file: add app to section 5, ports to section 7
+5. If public port needed: forward on router (`10.0.0.1`) to `10.0.0.50`, add to section 7
+6. Update this file: add to deployed apps table
 
----
+### Adding a New Internal Service via Caddy
 
-## 7. Network — IP Assignments & Port Forwards
+1. Edit `caddy/Caddyfile` locally (this repo), add a block:
+```
+<name>.gameserver {
+    reverse_proxy <container-name>:<port>
+    tls internal
+}
+```
+2. SCP to server: `scp caddy/Caddyfile gameserver:/opt/apps/caddy/Caddyfile`
+3. Reload Caddy: `ssh gameserver "docker exec caddy caddy reload --config /etc/caddy/Caddyfile"`
+4. Add DNS rewrite in AdGuard: `<name>.gameserver` → `100.93.238.124`
 
-### Static IPs
-| IP | Host |
+### Updating All Running Stacks
+
+Pull latest images and recreate containers for every running compose stack in `/opt/apps/`. Scripts are in this repo.
+
+| OS | Command |
 |---|---|
-| `10.0.0.1` | Home router / gateway |
-| `10.0.0.254` | Proxmox host (diu) |
-| `10.0.0.50` | gameserver (VM 111) |
+| **Windows** | `powershell -File update-stacks.ps1` |
+| **Linux/macOS** | `bash update-stacks.sh` |
 
-### Port Forwards (Router → gameserver `10.0.0.50`)
-| App | Protocol | Port | Status |
-|---|---|---|---|
-| Desynced | UDP | 10099 | active |
+Both scripts SSH into `gameserver` remotely — no need to log in first.
 
----
+### Trusting Caddy's Internal CA
 
-## 8. Adding a New VM to Proxmox
+All `*.gameserver` sites use `tls internal`, so browsers show a cert warning by default. Install Caddy's root CA once per device to fix this.
 
-### Recommended Settings
+**Get the cert** (from any machine with SSH access to gameserver):
+```bash
+ssh gameserver "docker exec caddy cat /data/caddy/pki/authorities/local/root.crt" > caddy-root-ca.crt
+```
+
+A copy is kept in this repo at `caddy-root-ca.crt`.
+
+| OS | Steps |
+|---|---|
+| **Windows** | Double-click `caddy-root-ca.crt` → Install Certificate → Local Machine → "Trusted Root Certification Authorities" → Finish |
+| **macOS** | Double-click → add to login Keychain → open Keychain Access → find "Caddy Local Authority" → Get Info → Trust → "Always Trust" |
+| **Linux** | `sudo cp caddy-root-ca.crt /usr/local/share/ca-certificates/caddy-root-ca.crt && sudo update-ca-certificates` |
+| **iOS** | AirDrop/email the `.crt` → Install Profile → Settings → General → About → Certificate Trust Settings → enable "Caddy Local Authority" |
+| **Android** | Settings → Security → Encryption & credentials → Install a certificate → CA certificate → select file |
+
+Restart the browser after installing.
+
+### Adding a New VM to Proxmox
+
+Recommended settings:
 | Setting | Value |
 |---|---|
 | Machine | q35 |
@@ -278,58 +278,68 @@ Use `ZFS-1` for VM disks. Avoid `local-lvm` for large VMs.
 
 ---
 
-## 9. Power Monitoring
+## 7. Network
 
-Scaphandre v1.0.2 installed on Proxmox host (`diu`). Uses Intel RAPL.
+### Static IPs
+| IP | Host |
+|---|---|
+| `10.0.0.1` | Home router / gateway |
+| `10.0.0.254` | Proxmox host (diu) |
+| `10.0.0.50` | gameserver (VM 111) |
+| `10.0.0.51` | cups (LXC 112) |
+| `100.93.238.124` | gameserver (Tailscale) |
+| `100.87.48.68` | cups (Tailscale) |
 
-> RAPL measures CPU package power only — excludes RAM, disks, NIC, fans. For true wall draw, use a smart plug.
+### Port Forwards (Router → gameserver `10.0.0.50`)
+| App | Protocol | Port | Status |
+|---|---|---|---|
+| Desynced | UDP | 10099 | active |
 
+### Internal DNS (`*.gameserver`)
+
+All Tailscale clients route DNS through AdGuard Home:
+
+| Layer | Config |
+|---|---|
+| Tailscale admin → Global nameserver | `100.93.238.124` (AdGuard Home), override local DNS enabled |
+| Tailscale admin → Split DNS | `gameserver` → `100.93.238.124` (kept alongside global nameserver) |
+| AdGuard DNS rewrites | `adguard.gameserver`, `grafana.gameserver`, `uptime.gameserver`, `valheim.gameserver` → `100.93.238.124` |
+| Caddy TLS | `tls internal` (Caddy's local CA — not Let's Encrypt) |
+
+To add a new `*.gameserver` hostname: see "Adding a New Internal Service via Caddy" in section 6.
+
+### Public Access for Game Servers
+
+Friends connect via Tailscale node sharing — gameserver is shared from personal tailnet to a separate friends tailnet. Friends install Tailscale, join the friends tailnet, and connect to `100.93.238.124:<port>`.
+
+---
+
+## 8. Monitoring
+
+Full monitoring stack deployed. See `MONITORING.md` for architecture, configuration, retention strategy, and recording rules.
+
+| Component | Location | Access |
+|---|---|---|
+| Scaphandre exporter | `diu` (systemd: `scaphandre-exporter.service`) | `:8080/metrics` |
+| Prometheus | gameserver (Docker) | internal only (no host port) |
+| Grafana | gameserver (Docker) | `https://grafana.gameserver` |
+| cAdvisor | gameserver (Docker) | internal only |
+| Node Exporter | gameserver (Docker) | internal only |
+| Uptime Kuma | gameserver (Docker) | `https://uptime.gameserver` |
+
+**Retention:** raw 15s → 1 day, hourly aggregates → 7 days, daily aggregates → forever.
+
+**Limitations:** RAPL measures CPU package power only — no IPMI/BMC on this board, no PSU wattage readout. For true wall draw, use a smart plug.
+
+**CLI quick check** (on `diu`):
 ```bash
-# Total host + top consumers
-scaphandre stdout
-
-# Per-VM breakdown (QEMU processes)
-scaphandre --vm stdout --process-regex qemu
+scaphandre stdout                              # total host + top consumers
+scaphandre --vm stdout --process-regex qemu    # per-VM breakdown
 ```
 
-RAPL is not accessible from inside the gameserver VM — per-container breakdown unavailable without additional VM config.
-
-**Planned: Grafana dashboard**
-- Scaphandre as a systemd service with Prometheus exporter on `diu`
-- Prometheus + Grafana stack
-- Import Hubblo's official Scaphandre dashboard for per-VM wattage graphs
-
 ---
 
-## 10. Planned: Public Access for Game Servers
-
-**Goal:** Allow friends to connect to game servers without IPv6 or joining a personal tailnet.
-
-**Constraints:**
-- Cloudflare Tunnel — TCP only, no UDP
-- Tailscale Funnel/Serve — TCP/HTTPS only, no UDP
-
-**Options:**
-
-| Option | Effort | Notes |
-|---|---|---|
-| **Tailscale node sharing** | Low | Preferred — see below |
-| **Direct IPv6 + DNS AAAA record** | Very low | Only works if friend has IPv6 |
-| **Cloudflare Spectrum** | Low | Supports UDP but requires paid plan |
-| **VPS UDP relay** | High | VPS forwards UDP home via `socat`/WireGuard |
-
-**Preferred: Tailscale node sharing**
-1. Install Tailscale on gameserver — stays on personal tailnet
-2. Create a second Tailscale account (different email) as the "friends" tailnet
-3. Tailscale admin: Machines → gameserver → **Share** → enter friends' tailnet email
-4. Invite friends to the friends' tailnet
-5. Friends connect to `<tailscale-ip>:10099` — personal tailnet stays private
-
-**Status:** Tailscale installed on gameserver (step 1 done). Node sharing not yet configured.
-
----
-
-## 11. Known Issues
+## 9. Known Issues
 
 | Issue | Status | Notes |
 |---|---|---|

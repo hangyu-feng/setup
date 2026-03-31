@@ -1,0 +1,56 @@
+services:
+  valheim:
+    image: ghcr.io/community-valheim-tools/valheim-server
+    container_name: valheim
+    restart: unless-stopped
+    stop_grace_period: 2m
+    cap_add:
+      - sys_nice
+    ports:
+      - "2456:2456/udp"
+      - "2457:2457/udp"
+    networks:
+      - proxy
+    environment:
+      # Server
+      - SERVER_NAME=vailgrss_server
+      - WORLD_NAME=vailgrass_world
+      - SERVER_PASS=
+      - SERVER_PUBLIC=false
+      # Backups — every 5 minutes, keep 3
+      - BACKUPS=true
+      - BACKUPS_CRON=*/5 * * * *
+      - BACKUPS_MAX_COUNT=3
+      - BACKUPS_MAX_AGE=0
+      - BACKUPS_IF_IDLE=false
+      - BACKUPS_IDLE_GRACE_PERIOD=3600
+      - BACKUPS_ZIP=true
+      # Auto-update — daily at 5 AM, only if empty
+      - UPDATE_CRON=0 5 * * *
+      - UPDATE_IF_IDLE=true
+      # Restart — daily at 5:10 AM, only if empty
+      - RESTART_CRON=10 5 * * *
+      - RESTART_IF_IDLE=true
+      # Supervisor web UI
+      - SUPERVISOR_HTTP=true
+      - SUPERVISOR_HTTP_PORT=9001
+      - SUPERVISOR_HTTP_USER=admin
+      - SUPERVISOR_HTTP_PASS=960730
+      # Discord notifications
+      - "PRE_SERVER_LISTENING_HOOK=curl -sfSL -X POST -H 'Content-Type: application/json' -d '{\"content\":\"Valheim server is starting...\"}' ${DISCORD_WEBHOOK}"
+      - "POST_SERVER_LISTENING_HOOK=curl -sfSL -X POST -H 'Content-Type: application/json' -d '{\"content\":\"Valheim server is online and ready!\"}' ${DISCORD_WEBHOOK}"
+      - "PRE_SERVER_SHUTDOWN_HOOK=curl -sfSL -X POST -H 'Content-Type: application/json' -d '{\"content\":\"Valheim server is shutting down...\"}' ${DISCORD_WEBHOOK}"
+      - "POST_SERVER_SHUTDOWN_HOOK=curl -sfSL -X POST -H 'Content-Type: application/json' -d '{\"content\":\"Valheim server has shut down.\"}' ${DISCORD_WEBHOOK}"
+      # BepInEx mod framework
+      - BEPINEX=true
+      # Timezone
+      - TZ=America/Chicago
+    env_file:
+      - .env
+    volumes:
+      - ./config:/config
+      - ./server:/opt/valheim
+
+networks:
+  proxy:
+    external: true

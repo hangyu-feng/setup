@@ -1,4 +1,19 @@
-# AdGuard Home web UI
-:80 {
+adguard.gameserver {
 	reverse_proxy adguard-home:80
+	tls internal
+}
+
+grafana.gameserver {
+	reverse_proxy grafana:3000
+	tls internal
+}
+
+uptime.gameserver {
+	reverse_proxy uptime-kuma:3001
+	tls internal
+}
+
+valheim.gameserver {
+	reverse_proxy valheim:9001
+	tls internal
 }

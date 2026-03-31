@@ -2,21 +2,27 @@ FROM steamcmd/steamcmd:ubuntu-24
 
 USER root
 
-# Enable 32-bit support and install Wine + Xvfb (virtual display for Wine)
-RUN dpkg --add-architecture i386 && \
-    apt-get update && \
+# Install 64-bit Wine + Xvfb (virtual display for Wine)
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        wine \
-        wine32:i386 \
+        wine64 \
         winbind \
         xvfb \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Desynced Dedicated Server — copied from /opt/desynced-files on host
+# Desynced Dedicated Server — App ID 2943070
+ARG STEAM_APP_ID=2943070
 ARG INSTALL_DIR=/opt/desynced
+ARG STEAM_USER
+ARG STEAM_PASS
 
-COPY desynced-files/ ${INSTALL_DIR}/
+RUN steamcmd \
+    +@sSteamCmdForcePlatformType windows \
+    +force_install_dir ${INSTALL_DIR} \
+    +login ${STEAM_USER} ${STEAM_PASS} \
+    +app_update ${STEAM_APP_ID} validate \
+    +quit
 
 WORKDIR ${INSTALL_DIR}
 

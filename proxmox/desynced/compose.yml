@@ -8,8 +8,9 @@ services:
     volumes:
       - ./server:/desynced/server
       - ./cache:/root/.wine
+      - ./entrypoint.sh:/entrypoint.sh
     environment:
-      SERVER_NAME: "My Desynced Server"
+      SERVER_NAME: "DesyncedServer"
       WORLD_NAME: "World1"
       MAX_PLAYERS: 10
       PRIVATE: "private"
@@ -17,7 +18,6 @@ services:
       RESOURCE_RICHNESS: 4
       BLIGHT_THRESHOLD: 0.1
       PEACEFUL_MODE: 2
-      WINEDEBUG: "-all"
     logging:
       options:
         max-size: "5m"

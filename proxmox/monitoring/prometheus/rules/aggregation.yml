@@ -1,0 +1,61 @@
+groups:
+  # Hourly aggregates — kept 7 days
+  - name: hourly_aggregates
+    interval: 5m
+    rules:
+      # Host power (watts) — hourly average
+      # scaph_host_energy_microjoules is a counter in µJ; rate gives µJ/s = µW; divide by 1e6 for watts
+      - record: power:host_watts:avg1h
+        expr: avg_over_time(rate(scaph_host_energy_microjoules[5m])[1h:5m]) / 1e6
+
+      # CPU core domain power — hourly average watts
+      - record: power:cpu_core_watts:avg1h
+        expr: avg_over_time(rate(scaph_domain_energy_microjoules{domain_name="core"}[5m])[1h:5m]) / 1e6
+
+      # Uncore domain power — hourly average watts
+      - record: power:uncore_watts:avg1h
+        expr: avg_over_time(rate(scaph_domain_energy_microjoules{domain_name="uncore"}[5m])[1h:5m]) / 1e6
+
+      # Per-container CPU usage — hourly average
+      - record: container:cpu_usage:avg1h
+        expr: avg_over_time(rate(container_cpu_usage_seconds_total{name!=""}[5m])[1h:5m])
+
+      # Per-container memory — hourly average
+      - record: container:memory_bytes:avg1h
+        expr: avg_over_time(container_memory_usage_bytes{name!=""}[1h])
+
+      # VM CPU usage — hourly average
+      - record: node:cpu_usage:avg1h
+        expr: avg_over_time((1 - rate(node_cpu_seconds_total{mode="idle"}[5m]))[1h:5m])
+
+  # Daily aggregates — kept forever
+  - name: daily_aggregates
+    interval: 1h
+    rules:
+      # Host power — daily average watts
+      - record: power:host_watts:avg1d
+        expr: avg_over_time(power:host_watts:avg1h[1d])
+
+      # Host power — daily total watt-hours
+      - record: power:host_watthours:sum1d
+        expr: avg_over_time(power:host_watts:avg1h[1d]) * 24
+
+      # CPU core power — daily average
+      - record: power:cpu_core_watts:avg1d
+        expr: avg_over_time(power:cpu_core_watts:avg1h[1d])
+
+      # Uncore power — daily average
+      - record: power:uncore_watts:avg1d
+        expr: avg_over_time(power:uncore_watts:avg1h[1d])
+
+      # Per-container CPU — daily average
+      - record: container:cpu_usage:avg1d
+        expr: avg_over_time(container:cpu_usage:avg1h[1d])
+
+      # Per-container memory — daily average
+      - record: container:memory_bytes:avg1d
+        expr: avg_over_time(container:memory_bytes:avg1h[1d])
+
+      # VM CPU — daily average
+      - record: node:cpu_usage:avg1d
+        expr: avg_over_time(node:cpu_usage:avg1h[1d])
