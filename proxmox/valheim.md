@@ -29,7 +29,7 @@
 | Public | `false` (Tailscale only) |
 | Max players | 5 (Valheim default is 10) |
 | Crossplay | `false` |
-| Mods | BepInEx + 7 QoL mods (see section 10) |
+| Mods | BepInEx + 8 QoL mods (see section 10) |
 
 ---
 
@@ -105,7 +105,7 @@ networks:
 - **`BACKUPS_IF_IDLE=false`** — no point backing up when nobody has played. Grace period of 3600s ensures a final backup after the last player leaves.
 - **`SERVER_PUBLIC=false`** — not listed in Steam browser. Friends connect directly via Tailscale IP.
 - **`proxy` network** — needed so Caddy can reach the supervisor UI on port 9001.
-- **BepInEx + 7 QoL mods** — deployed 2026-03-25. See section 10 for full list.
+- **BepInEx + 8 QoL mods** — deployed 2026-03-25. See section 10 for full list.
 - **No `deploy.resources` block** — Docker Compose v2 resource limits require `--compatibility` flag or swarm mode. Instead, we rely on the VM's 16GB being sufficient. Valheim vanilla with 5 players uses ~3-4GB RAM.
 
 ---
@@ -120,7 +120,12 @@ networks:
 │   ├── worlds_local/  ← vailgrass_world.db, .fwl files
 │   ├── backups/       ← zip backups (max 3)
 │   └── bepinex/
-│       └── plugins/   ← mod DLLs (8 files)
+│       ├── advize.PlantEverything.cfg          ← active config (currently 1.2x)
+│       ├── advize.PlantEverything.cfg.default  ← vanilla growth speeds (readonly)
+│       ├── advize.PlantEverything.cfg.1.2x     ← 1.2x growth speed
+│       ├── advize.PlantEverything.cfg.2x       ← 2x growth speed
+│       ├── advize.PlantEverything.cfg.5x       ← 5x growth speed
+│       └── plugins/   ← mod DLLs (9 files)
 └── server/            ← downloaded Valheim server files (~1 GB)
 ```
 
@@ -263,6 +268,7 @@ BepInEx is enabled via `BEPINEX=true` env var. All mods below are installed on t
 | `PlantEasily` | Advize | Grid-snap planting so you can place rows/grids instead of one-by-one |
 | `Quick_Stack_Store_Sort_Trash_Restock` | Goldenrevolver | One-click sort, stack, and restock items into nearby chests |
 | `TargetPortal` | Smoothbrain | Pick portal destination from a list instead of matching portal names |
+| `TeleportEverything` | OdinPlus | Teleport ores, ingots, and carts through portals (server-synced config) |
 | `MultiUserChest` | MSchmoecker | Multiple players can open and use the same chest simultaneously |
 
 #### Server mod location
@@ -334,6 +340,13 @@ curl -L -o mod.zip \
 AUTHOR/MOD/VERSION/"
 unzip -o -j mod.zip "*/ModName.dll" -d .
 rm mod.zip
+cd /opt/apps/valheim && docker compose restart
+
+# Switch plant growth speed preset
+# Available: .default (vanilla), .1.2x, .2x, .5x
+cd /opt/apps/valheim/config/bepinex
+cp advize.PlantEverything.cfg.2x \
+  advize.PlantEverything.cfg
 cd /opt/apps/valheim && docker compose restart
 ```
 
