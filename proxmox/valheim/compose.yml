@@ -17,11 +17,11 @@ services:
       - WORLD_NAME=vailgrass_world
       - SERVER_PASS=
       - SERVER_PUBLIC=false
-      # Backups — every 5 minutes, keep 3
+      # Backups — every 10 minutes, keep 10, retain 7 days
       - BACKUPS=true
-      - BACKUPS_CRON=*/5 * * * *
-      - BACKUPS_MAX_COUNT=3
-      - BACKUPS_MAX_AGE=0
+      - BACKUPS_CRON=*/10 * * * *
+      - BACKUPS_MAX_COUNT=10
+      - BACKUPS_MAX_AGE=7
       - BACKUPS_IF_IDLE=false
       - BACKUPS_IDLE_GRACE_PERIOD=3600
       - BACKUPS_ZIP=true
@@ -44,7 +44,7 @@ services:
       # BepInEx mod framework
       - BEPINEX=true
       # Timezone
-      - TZ=America/Chicago
+      - TZ=America/Los_Angeles
     env_file:
       - .env
     volumes:

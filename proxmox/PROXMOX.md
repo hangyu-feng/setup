@@ -24,6 +24,10 @@
 | 2026-03-23 | Custom Docker Containers Grafana dashboard created (community dashboards incompatible with cAdvisor label format) |
 | 2026-03-24 | Valheim dedicated server deployed and verified: vanilla, Tailscale-only, Supervisor UI via Caddy, UDP 2456-2457 |
 | 2026-03-25 | CUPS print server deployed in Alpine LXC 112 with Tailscale; HP ENVY 6155e added via IPP |
+| 2026-04-02 | Valheim: fixed backup retention (MAX_AGE=0 was deleting all zips); changed to 10-min interval, keep 10, 7-day max age |
+| 2026-04-02 | Valheim: TZ changed from America/Chicago to America/Los_Angeles |
+| 2026-04-02 | Valheim: added mods — AdventureBackpacks, Mining, Sailing, YamlDotNet; removed SkilledCarryWeight |
+| 2026-04-02 | Valheim: world restored to 7:53 PM PDT save; manual backup in worlds_local_backup_20260402_204007 |
 
 ---
 
@@ -176,9 +180,13 @@ All Docker apps live under `/opt/apps/`. Each app has its own subdirectory with 
 │       └── data/          (persisted via volume)
 └── valheim/
     ├── compose.yml
+    ├── .env               (DISCORD_WEBHOOK)
     ├── config/            (world saves, backups — persisted via volume)
     │   ├── worlds_local/  (vailgrass_world.db, .fwl)
-    │   └── backups/       (zip backups, max 3)
+    │   ├── backups/       (zip backups, max 10, 7-day retention)
+    │   ├── worlds_local_backup_*/  (manual backups)
+    │   └── bepinex/
+    │       └── plugins/   (mod DLLs)
     └── server/            (Valheim server binaries — persisted via volume)
 ```
 
@@ -193,8 +201,39 @@ All Docker apps live under `/opt/apps/`. Each app has its own subdirectory with 
 | cAdvisor | running | `/opt/apps/monitoring/` | Per-container CPU/memory/network/disk metrics |
 | Node Exporter | running | `/opt/apps/monitoring/` | VM-level system metrics |
 | Uptime Kuma | running | `/opt/apps/monitoring/` | Service health monitoring at `https://uptime.gameserver` |
-| Valheim | running | `/opt/apps/valheim/` | Vanilla dedicated server, UDP 2456-2457; Supervisor UI at `https://valheim.gameserver` |
+| Valheim | running | `/opt/apps/valheim/` | Modded dedicated server (BepInEx), UDP 2456-2457; Supervisor UI at `https://valheim.gameserver` |
 | Watchtower | planned | `/opt/apps/watchtower/` | Auto-updates containers with `com.centurylinklabs.watchtower.enable=true` label |
+
+### Valheim
+
+**Mods (BepInEx):** All mods require matching client-side installation.
+
+| Mod | Author | Description |
+|---|---|---|
+| Jotunn | ValheimModding | Modding library (dependency) |
+| YamlDotNet | ValheimModding | YAML library (dependency) |
+| AdventureBackpacks | Vapok | Progression-based backpacks per biome |
+| AzuCraftyBoxes | Azumatt | Craft from nearby containers |
+| AzuExtendedPlayerInventory | Azumatt | Extra inventory rows, equipment slots, quick slots |
+| Mining | Smoothbrain | Mining skill — more damage + yield |
+| Sailing | Smoothbrain | Sailing skill — faster ships + exploration radius |
+| MultiUserChest | MSchmoecker | Multiple players use same chest |
+| PlantEverything | Advize | Plant any resource anywhere |
+| PlantEasily | Advize | Bulk planting with grid snapping |
+| QuickStackStore | goldenrevolver | Quick stack, sort, trash, restock |
+| TargetPortal | Smoothbrain | Target any portal from map UI |
+| TeleportEverything | OdinPlus | Teleport with restricted items |
+
+**Backups:**
+- Container zip backups: every 10 min, keep 10, 7-day max age, skip when idle
+- Game engine autosave: every 30 min (default), keeps `.db.old` + 4 `_backup_auto-*` files
+- Manual backups: `config/worlds_local_backup_<timestamp>/` (not auto-deleted)
+
+To make a manual backup:
+```bash
+cp -a /opt/apps/valheim/config/worlds_local \
+  /opt/apps/valheim/config/worlds_local_backup_$(date +%Y%m%d_%H%M%S)
+```
 
 ### Caddy
 
