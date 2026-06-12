@@ -77,5 +77,14 @@ gscompress() {
     fi
   done
 }
-SETUP_BASE_DIR=$(cd "$(dirname -- "${BASH_SOURCE[0]}")/../.."; pwd)
-export RIPGREP_CONFIG_PATH=${GIT_SETUP_DIR}/configs/ripgreprc
+if [ -n "${BASH_SOURCE:-}" ]; then
+  setup_alias_file="${BASH_SOURCE[0]}"
+elif [ -n "${ZSH_VERSION:-}" ]; then
+  setup_alias_file="${(%):-%x}"
+else
+  setup_alias_file="$0"
+fi
+SETUP_BASE_DIR=$(cd "$(dirname -- "$setup_alias_file")/../.." && pwd)
+unset setup_alias_file
+
+export RIPGREP_CONFIG_PATH="${SETUP_BASE_DIR}/configs/ripgreprc"

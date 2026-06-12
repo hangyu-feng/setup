@@ -1,1 +1,1 @@
-$Env:RIPGREP_CONFIG_PATH = "$HOME/setup/configs/.ripgreprc"
+$Env:RIPGREP_CONFIG_PATH = (Resolve-Path (Join-Path $PSScriptRoot "../../ripgreprc")).Path

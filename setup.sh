@@ -181,6 +181,37 @@ vim_setup() {
   vim +PlugInstall +qall
 }
 
+fish_setup() {
+  echo "=== fish setup ==="
+  mkdir -p ~/.config
+
+  fish_config=~/.config/fish
+  repo_fish_config=~/setup/configs/fish
+  script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  if [[ -d "$script_dir/configs/fish" ]]; then
+    repo_fish_config="$script_dir/configs/fish"
+  fi
+
+  if [[ ! -d $repo_fish_config ]]; then
+    echo "fish config directory not found at $repo_fish_config; skipping fish setup"
+    return
+  fi
+
+  if [[ -L $fish_config ]] && [[ $(readlink "$fish_config") == "$repo_fish_config" ]]; then
+    echo "$fish_config already links to $repo_fish_config"
+    return
+  fi
+
+  if [[ -e $fish_config ]] || [[ -L $fish_config ]]; then
+    backup="${fish_config}.backup.$(date +'%Y-%m-%d_%H-%M-%S')"
+    echo "backing up existing $fish_config to $backup"
+    mv "$fish_config" "$backup"
+  fi
+
+  echo "linking $fish_config to $repo_fish_config"
+  ln -s "$repo_fish_config" "$fish_config"
+}
+
 zsh_setup() {
   echo "=== zsh setup ==="
   if [ ! -f ~/antigen.zsh ]; then
@@ -233,6 +264,7 @@ main() {
   ssh_key
   git_configs "$email" "$username"
   vim_setup
+  fish_setup
   if [[ $os == "mac" ]]; then
     iterm2_setup
     echo ""

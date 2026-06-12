@@ -77,7 +77,7 @@ abbr -a gcf   git config --list
 abbr -a gcfu  git commit --fixup
 
 # Describe
-abbr -a gdct  git describe --tags (git rev-list --tags --max-count=1)
+abbr -a gdct  'git describe --tags (git rev-list --tags --max-count=1)'
 
 # Diff
 abbr -a gd    git diff
@@ -105,11 +105,11 @@ abbr -a glgp  git log --stat --patch
 abbr -a glgg  git log --graph
 abbr -a glgga git log --graph --decorate --all
 abbr -a glgm  git log --graph --max-count=10
-abbr -a glol  git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset'
-abbr -a glols git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset' --stat
-abbr -a glola git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset' --all
-abbr -a glod  git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ad) %C(bold blue)<%an>%Creset'
-abbr -a glods git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ad) %C(bold blue)<%an>%Creset' --date=short
+abbr -a glol  "git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset'"
+abbr -a glols "git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset' --stat"
+abbr -a glola "git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset' --all"
+abbr -a glod  "git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ad) %C(bold blue)<%an>%Creset'"
+abbr -a glods "git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ad) %C(bold blue)<%an>%Creset' --date=short"
 
 # Merge
 abbr -a gm    git merge
@@ -136,7 +136,7 @@ abbr -a gpd   git push --dry-run
 abbr -a gpf   git push --force-with-lease --force-if-includes
 abbr -a gpf!  git push --force
 abbr -a gpv   git push --verbose
-abbr -a gpoat git push origin --all; and git push origin --tags
+abbr -a gpoat 'git push origin --all; and git push origin --tags'
 abbr -a gpod  git push origin --delete
 # gpsup/gpsupf/ggpush/gpu are functions (need runtime branch name)
 

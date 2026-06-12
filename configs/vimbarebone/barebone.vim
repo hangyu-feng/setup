@@ -267,6 +267,66 @@ nnoremap <leader>d :bd<CR>
 " Search in current directory
 nnoremap <leader>f :vimgrep // **/*<Left><Left><Left><Left><Left><Left>
 
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" => Fuzzy file finder (built-in, no plugins)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+let s:ff_all = []
+let s:ff_filtered = []
+let s:ff_query = ''
+
+function! s:FFFilter(winid, key) abort
+  if a:key ==# "\<CR>"
+    call popup_close(a:winid, line('.', a:winid))
+    return 1
+  elseif a:key ==# "\<Esc>" || a:key ==# "\<C-c>"
+    call popup_close(a:winid, -1)
+    return 1
+  elseif a:key ==# "\<BS>" || a:key ==# "\<C-h>"
+    let s:ff_query = strcharpart(s:ff_query, 0, strchars(s:ff_query) - 1)
+  elseif a:key ==# "\<C-j>" || a:key ==# "\<Down>"
+    call win_execute(a:winid, 'normal! j')
+    return 1
+  elseif a:key ==# "\<C-k>" || a:key ==# "\<Up>"
+    call win_execute(a:winid, 'normal! k')
+    return 1
+  elseif strlen(a:key) == 1 && a:key =~# '[[:print:]]'
+    let s:ff_query .= a:key
+  else
+    return 0
+  endif
+  let s:ff_filtered = empty(s:ff_query)
+        \ ? copy(s:ff_all)
+        \ : matchfuzzy(s:ff_all, s:ff_query)
+  call popup_settext(a:winid, empty(s:ff_filtered) ? ['(no matches)'] : s:ff_filtered)
+  call popup_setoptions(a:winid, #{title: ' Files > ' . s:ff_query . ' '})
+  return 1
+endfunction
+
+function! s:FFCallback(winid, result) abort
+  if type(a:result) == v:t_number && a:result > 0 && !empty(s:ff_filtered)
+    execute 'edit' fnameescape(s:ff_filtered[a:result - 1])
+  endif
+endfunction
+
+function! FuzzyFind() abort
+  let s:ff_all = systemlist('find . -type f -not -path "*/.git/*" -not -path "*/node_modules/*"')
+  let s:ff_filtered = copy(s:ff_all)
+  let s:ff_query = ''
+  call popup_create(s:ff_filtered, #{
+        \ title: ' Files ',
+        \ filter: function('s:FFFilter'),
+        \ callback: function('s:FFCallback'),
+        \ minwidth: 60,
+        \ minheight: 15,
+        \ maxheight: 15,
+        \ border: [],
+        \ cursorline: 1,
+        \ mapping: 0,
+        \ })
+endfunction
+
+nnoremap <leader>p :call FuzzyFind()<CR>
+
 if has("clipboard")
   set clipboard=unnamed " copy to the system clipboard
   if has("unnamedplus") " X11 support
