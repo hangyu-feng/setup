@@ -15,15 +15,8 @@ def convert_to_encoding(filepath, output_encoding, output_filename):
             return False
         with open(output_filename, "wb") as newfile:
             newfile.write(bestmatch.output())
-        # with open(filepath, "rb") as f:
-        #     rawdata = f.read()
-        # dammit = UnicodeDammit(rawdata, ['Big5', 'GB2312', 'EUC-TW', 'HZ-GB-2312', 'ISO-2022-CN', 'GBK', 'GB18030', 'UTF-8'])
-
-        # with open(output_filename, "w", encoding=output_encoding) as newfile:
-
-        #     newfile.write(dammit.unicode_markup)
         return True
-    finally:
+    except Exception:
         return False
 
 

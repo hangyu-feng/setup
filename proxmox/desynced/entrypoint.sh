@@ -12,7 +12,7 @@ rm -f /tmp/.X99-lock
 # Start virtual display
 Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp &
 export DISPLAY=:99
-sleep 1
+until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 0.1; done
 
 # Initialize Wine prefix on first run
 if [ ! -d "$HOME/.wine" ]; then

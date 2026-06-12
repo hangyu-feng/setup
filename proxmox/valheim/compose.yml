@@ -35,7 +35,7 @@ services:
       - SUPERVISOR_HTTP=true
       - SUPERVISOR_HTTP_PORT=9001
       - SUPERVISOR_HTTP_USER=admin
-      - SUPERVISOR_HTTP_PASS=960730
+      - SUPERVISOR_HTTP_PASS=${SUPERVISOR_HTTP_PASS}
       # Discord notifications
       - "PRE_SERVER_LISTENING_HOOK=curl -sfSL -X POST -H 'Content-Type: application/json' -d '{\"content\":\"Valheim server is starting...\"}' ${DISCORD_WEBHOOK}"
       - "POST_SERVER_LISTENING_HOOK=curl -sfSL -X POST -H 'Content-Type: application/json' -d '{\"content\":\"Valheim server is online and ready!\"}' ${DISCORD_WEBHOOK}"

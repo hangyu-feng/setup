@@ -44,10 +44,10 @@ process_args() {
         email=${arg#"--email="}
         ;;
       "--packages="*)
-        packages+=(${arg#"--packages="})
+        packages+=("${arg#"--packages="}")
         ;;
       "--casks="*)
-        casks+=(${arg#"--casks="})
+        casks+=("${arg#"--casks="}")
         ;;
       "--upgrade")
         upgrade=1
@@ -83,7 +83,7 @@ set_package_manager() {
     if [[ $? == 1 ]]; then
       echo "brew not found, installing homebrew"
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-      eval $(~/.linuxbrew/bin/brew shellenv)  # add brew to environment
+      eval "$(~/.linuxbrew/bin/brew shellenv)"  # add brew to environment
     fi
     pm=$(which brew)
     if [[ ! $pm =~ brew ]]; then
@@ -108,26 +108,27 @@ install_packages() {
   if [[ $upgrade -gt 0 ]]; then
     $pm upgrade
   fi
-  for package in "$@"; do
-    which package
+  for package in "${packages[@]}"; do
+    which "$package"
     if [[ $? == 1 ]]; then
       echo "installing $package: \`$pm install $package\`"
-      $pm install $package
+      $pm install "$package"
     fi
   done
 }
 
 install_casks() {
   echo "=== install casks ==="
-  $pm cask install ${casks[@]}
+  brew install --cask "${casks[@]}"
 }
 
 download_configs() {
   echo "=== download config files ==="
 
   for config in .vimrc .zshrc .zprofile; do
-    if [[ -f $config ]]; then
-      mv $config "~/.old/${config#.}/${config}-$(date +'%Y-%m-%d_%H-%M-%S')"
+    if [[ -f "$HOME/$config" ]]; then
+      mkdir -p "$HOME/.old/${config#.}"
+      mv "$HOME/$config" "$HOME/.old/${config#.}/${config}-$(date +'%Y-%m-%d_%H-%M-%S')"
     fi
   done
   curl --create-dir -o ~/setup/configs/.vimrc https://raw.githubusercontent.com/hangyu-feng/.setup/master/configs/.vimrc
@@ -139,20 +140,19 @@ ssh_key() {
   # check for existing ssh key
   pub_key=undefined
   pub_key_names=( id_rsa.pub id_ecdsa.pub id_ed25519.pub )
-  for filename in $(ls -a ~/.ssh); do
-    for pub_key_name in ${pub_key_names[*]}; do
-      if [[ $filename == $pub_key_name ]]; then
-        pub_key=~/.ssh/$filename
-      fi
-    done
+  for pub_key_name in "${pub_key_names[@]}"; do
+    if [[ -f ~/.ssh/$pub_key_name ]]; then
+      pub_key=~/.ssh/$pub_key_name
+      break
+    fi
   done
   # generage ssh key if none exists
   if [[ $pub_key == undefined ]]; then
     ssh-keygen -t rsa -b 4096 -C $email
     eval "$(ssh-agent -s)"
-    if [[ $os == "mac" ]]; then
+    if [[ $os == "Mac" ]]; then
       [[ ! -f ~/.ssh/config ]] && touch ~/.ssh/config
-      ssh-add -K ~/.ssh/id_rsa
+      ssh-add --apple-use-keychain ~/.ssh/id_rsa
     else
       ssh-add ~/.ssh/id_rsa
     fi
@@ -216,7 +216,7 @@ zsh_setup() {
   echo "=== zsh setup ==="
   if [ ! -f ~/antigen.zsh ]; then
     echo "~/antigen.zsh folder doesn't exist, install antigen"
-    curl -L git.io/antigen > ~/antigen.zsh  # zsh package manager
+    curl -fsSL https://raw.githubusercontent.com/zsh-users/antigen/master/bin/antigen.zsh > ~/antigen.zsh
   else
     echo "antigen already installed"
   fi
@@ -257,7 +257,7 @@ main() {
   process_args "$@"
   set_package_manager
   install_packages ${packages[*]}
-  if [[ $pm =~ "brew" ]] && [[ $os == mac ]]; then
+  if [[ $pm =~ "brew" ]] && [[ $os == "Mac" ]]; then
     install_casks
   fi
   download_configs
@@ -265,11 +265,11 @@ main() {
   git_configs "$email" "$username"
   vim_setup
   fish_setup
-  if [[ $os == "mac" ]]; then
+  if [[ $os == "Mac" ]]; then
     iterm2_setup
     echo ""
     echo "Here are some optional programs that can be installed:"
-    echo "    brew cask install docker macs-fan-control turbo-boost-switcher fanny wechat"
+    echo "    brew install --cask docker macs-fan-control turbo-boost-switcher fanny wechat"
     echo ""
   fi
   zsh_setup  # zsh setup should always be the last since it switch to zsh and pauses the script

@@ -24,6 +24,12 @@ RUN steamcmd \
     +app_update ${STEAM_APP_ID} validate \
     +quit
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && useradd -m -u 1000 -s /bin/bash desynced \
+    && chown -R desynced:desynced ${INSTALL_DIR}
+
+USER desynced
 WORKDIR ${INSTALL_DIR}
 
 # /desynced/server is mounted for saves and server config
@@ -31,8 +37,5 @@ VOLUME ["/desynced/server"]
 
 # UDP game port
 EXPOSE 10099/udp
-
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

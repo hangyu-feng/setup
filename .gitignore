@@ -2,3 +2,4 @@
 configs/fish/fish_variables
 configs/fish/completions/
 configs/fish/functions/br.fish
+**/.env
