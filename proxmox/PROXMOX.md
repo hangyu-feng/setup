@@ -27,6 +27,7 @@
 | 2026-04-02 | Valheim: fixed backup retention (MAX_AGE=0 was deleting all zips); changed to 10-min interval, keep 10, 7-day max age |
 | 2026-04-02 | Valheim: TZ changed from America/Chicago to America/Los_Angeles |
 | 2026-04-02 | Valheim: added mods — AdventureBackpacks, Mining, Sailing, YamlDotNet; removed SkilledCarryWeight |
+| 2026-04-21 | Valheim: added PlanBuild mod (terrain editing + blueprints) |
 | 2026-04-02 | Valheim: world restored to 7:53 PM PDT save; manual backup in worlds_local_backup_20260402_204007 |
 
 ---
@@ -223,6 +224,7 @@ All Docker apps live under `/opt/apps/`. Each app has its own subdirectory with 
 | QuickStackStore | goldenrevolver | Quick stack, sort, trash, restock |
 | TargetPortal | Smoothbrain | Target any portal from map UI |
 | TeleportEverything | OdinPlus | Teleport with restricted items |
+| PlanBuild | MathiasDecrock | Terrain editing + blueprint building tool |
 
 **Backups:**
 - Container zip backups: every 10 min, keep 10, 7-day max age, skip when idle

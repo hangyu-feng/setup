@@ -29,8 +29,8 @@ function gm { git merge $args }
 function gmom { git merge origin/master $args }
 function gma { git merge --abort $args }
 function gp { git push $args }
-function grhh { git reset HEAD $args }
-function grhh { git reset --hard HEAD $args }
+function grh { git reset $args }
+function grhh { git reset --hard $args }
 function grs { git restore $args }
 function gst { git status $args }
 function gstc { git stash clear $args }

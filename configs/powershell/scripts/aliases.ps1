@@ -10,16 +10,24 @@ function rename-ext {
   }
 }
 
-Set-Alias -Name vim -Value "C:\Program Files\Vim\vim92\vim.exe"
-Set-Alias -Name vi -Value "C:\Program Files\Vim\vim92\vim.exe"
+# Resolve vim to the highest installed version so this survives Vim upgrades.
+$vimExe = Get-ChildItem "C:\Program Files\Vim\vim*\vim.exe" -ErrorAction SilentlyContinue |
+  Sort-Object FullName -Descending | Select-Object -First 1
+if ($vimExe) {
+  Set-Alias -Name vim -Value $vimExe.FullName
+  Set-Alias -Name vi  -Value $vimExe.FullName
+}
 
 Set-Alias -Name python2 -Value "C:\Python27\python.exe"
 Set-Alias -Name py2 -Value "C:\Python27\python.exe"
 
 Set-Alias -Name emulator -Value "C:\Users\VailG\AppData\Local\Android\Sdk\emulator\emulator.exe"
 Set-Alias -Name adb -Value "C:\Users\VailG\AppData\Local\Android\Sdk\platform-tools\adb.exe"
-Set-Alias -Name mail -Value "Send-MailMessage"
-Set-Alias -Name rcon -Value "C:\Users\VailG\rcon-0.10.3-win64\rcon.exe"
+
+# Resolve rcon to whatever version is unpacked in the home dir.
+$rconExe = Get-ChildItem "C:\Users\VailG\rcon-*\rcon.exe" -ErrorAction SilentlyContinue |
+  Sort-Object FullName -Descending | Select-Object -First 1
+if ($rconExe) { Set-Alias -Name rcon -Value $rconExe.FullName }
 
 set-alias -name conda -value "micromamba"
 
@@ -32,10 +40,6 @@ function defpy {
   if (Test-Path -Path ~/def_env) {
     ~/def_env/Scripts/activate.ps1
   }
-}
-
-function conda-activate($conda_env = "C:\Users\VailG\miniconda3") {
-  pwsh -ExecutionPolicy ByPass -NoExit -Command "& 'C:\Users\VailG\miniconda3\shell\condabin\conda-hook.ps1' ; conda activate ${conda_env} ; Set-PoshPrompt pure "
 }
 
 function ffmpeg-download($url, $origin, $referer, $outpath) {
@@ -82,7 +86,7 @@ function remove-duplicate() {
 }
 
 function rgf() {
-  rg --files | rg --smart-case ${args}
+  rg --files | rg --smart-case @args
 }
 
 function sendkeys([int]${sleeptime} = 1, [string]${key} = ' ') {

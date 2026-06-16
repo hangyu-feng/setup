@@ -17,9 +17,16 @@ function rdoCreateFirewallRule(){
     -Action Block
 }
 
+function rdoGetRule() {
+  return Get-NetFirewallRule -Name $(rdoRuleName) -ErrorAction SilentlyContinue
+}
+
 function rdoStatus() {
-  $rulename = $(rdoRuleName)
-  $rule = Get-NetFirewallRule -name ${rulename}
+  $rule = rdoGetRule
+  if (-not $rule) {
+    Write-Output "rdo firewall rule not created. Run 'rdo create' first."
+    return
+  }
   if (${rule}.Enabled -eq $true) {
     Write-Output "rdo port blocking enabled."
   } else {
@@ -28,18 +35,20 @@ function rdoStatus() {
 }
 
 function rdoDisable() {
+  if (-not (rdoGetRule)) { rdoStatus; return }
   Disable-NetFirewallRule -Name $(rdoRuleName)
   rdoStatus
 }
 
 function rdoEnable() {
+  if (-not (rdoGetRule)) { rdoStatus; return }
   Enable-NetFirewallRule -Name $(rdoRuleName)
   rdoStatus
 }
 
 function rdoToggle() {
-  $rulename = $(rdoRuleName)
-  $rule = Get-NetFirewallRule -name ${rulename}
+  $rule = rdoGetRule
+  if (-not $rule) { rdoStatus; return }
 
   if (${rule}.Enabled -eq $true) {
     Disable-NetFirewallRule -InputObject $rule
